@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>خطط الاستثمار</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+    body {
+        background: #0d0d0d;
+        color: white;
+        font-family: system-ui;
+        margin: 0;
+        padding: 15px;
+        text-align: center;
+    }
+
+    h2 {
+        color: gold;
+        margin-bottom: 20px;
+        font-size: 22px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .card {
+        background: linear-gradient(145deg, #1a1a1a, #111);
+        border: 1px solid #444;
+        border-radius: 15px;
+        padding: 15px;
+        box-shadow: 0 0 10px #000;
+        transition: 0.2s;
+    }
+
+    .card:hover {
+        transform: scale(1.03);
+        border-color: gold;
+    }
+
+    .amount {
+        font-size: 20px;
+        color: gold;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    .return, .duration {
+        font-size: 14px;
+        margin-bottom: 5px;
+        color: #ccc;
+    }
+
+    button {
+        width: 100%;
+        padding: 10px;
+        margin-top: 10px;
+        background: gold;
+        border: none;
+        color: black;
+        font-weight: bold;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+</style>
+</head>
+
+<body>
+
+<h2>خطط الاستثمار</h2>
+
+<div class="grid">
+
+    <!-- خطة 10$ -->
+    <div class="card">
+        <div class="amount">الخطة — 10 دولار</div>
+        <div class="return">العائد — 8 دولار</div>
+        <div class="duration">المدة — 10 أيام</div>
+        <button onclick="invest(10, 8)">استثمار الآن</button>
+    </div>
+
+    <!-- خطة 50$ -->
+    <div class="card">
+        <div class="amount">الخطة — 50 دولار</div>
+        <div class="return">العائد — 40 دولار</div>
+        <div class="duration">المدة — 10 أيام</div>
+        <button onclick="invest(50, 40)">استثمار الآن</button>
+    </div>
+
+    <!-- خطة 100$ -->
+    <div class="card">
+        <div class="amount">الخطة — 100 دولار</div>
+        <div class="return">العائد — 80 دولار</div>
+        <div class="duration">المدة — 10 أيام</div>
+        <button onclick="invest(100, 80)">استثمار الآن</button>
+    </div>
+
+    <!-- خطة 200$ -->
+    <div class="card">
+        <div class="amount">الخطة — 200 دولار</div>
+        <div class="return">العائد — 160 دولار</div>
+        <div class="duration">المدة — 10 أيام</div>
+        <button onclick="invest(200, 160)">استثمار الآن</button>
+    </div>
+
+    <!-- خطة 500$ -->
+    <div class="card">
+        <div class="amount">الخطة — 500 دولار</div>
+        <div class="return">العائد — 400 دولار</div>
+        <div class="duration">المدة — 10 أيام</div>
+        <button onclick="invest(500, 400)">استثمار الآن</button>
+    </div>
+
+    <!-- خطة 1000$ -->
+    <div class="card">
+        <div class="amount">الخطة — 1000 دولار</div>
+        <div class="return">العائد — 800 دولار</div>
+        <div class="duration">المدة — 10 أيام</div>
+        <button onclick="invest(1000, 800)">استثمار الآن</button>
+    </div>
+
+</div>
+
+<script type="module">
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// ربط Supabase
+const supabase = createClient(
+    "https://zrnrrnbyhjcusfwoeucd.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+);
+
+// تنزيل رصيد المستخدم
+async function invest(amount, profit) {
+
+    let { data: session } = await supabase.auth.getUser();
+    if (!session.user) {
+        alert("يجب تسجيل الدخول أولاً");
+        return;
+    }
+
+    let user_id = session.user.id;
+
+    // جلب الرصيد
+    let { data: balData } = await supabase
+        .from("balances")
+        .select("*")
+        .eq("user_id", user_id)
+        .maybeSingle();
+
+    if (!balData || balData.balance < amount) {
+        alert("رصيدك غير كافٍ لإتمام الاستثمار");
+        return;
+    }
+
+    // خصم الرصيد
+    await supabase
+        .from("balances")
+        .update({
+            balance: balData.balance - amount
+        })
+        .eq("user_id", user_id);
+
+    // إضافة طلب استثمار
+    await supabase.from("investment_requests").insert({
+        user_id: user_id,
+        amount: amount,
+        return_amount: profit,
+        start_date: new Date(),
+        end_date: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+        status: "pending"
+    });
+
+    alert("✔ تم بدء الاستثمار بنجاح");
+}
+
+</script>
+
+</body>
+</html>
