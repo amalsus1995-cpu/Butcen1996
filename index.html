@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تسجيل الدخول | BTC Cash System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+    body {
+        background: #0d0d0d;
+        color: white;
+        font-family: system-ui;
+        text-align: center;
+        padding: 20px;
+    }
+
+    h2 {
+        color: gold;
+        margin-bottom: 20px;
+    }
+
+    .box {
+        background: #1a1a1a;
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid #444;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        margin-top: 12px;
+        background: #111;
+        border: 1px solid #555;
+        border-radius: 10px;
+        color: white;
+        font-size: 16px;
+        text-align: right;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        margin-top: 15px;
+        background: gold;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        color: black;
+        cursor: pointer;
+    }
+
+    .switch {
+        margin-top: 15px;
+        color: #ccc;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+</style>
+</head>
+
+<body>
+
+<h2>BTC Cash System</h2>
+
+<div class="box" id="loginBox">
+
+    <h3>تسجيل الدخول</h3>
+
+    <input id="loginEmail" type="email" placeholder="البريد الإلكتروني">
+    <input id="loginPass" type="password" placeholder="كلمة المرور">
+
+    <button onclick="login()">دخول</button>
+
+    <div class="switch" onclick="showRegister()">إنشاء حساب جديد</div>
+</div>
+
+<div class="box" id="registerBox" style="display:none">
+
+    <h3>إنشاء حساب</h3>
+
+    <input id="regEmail" type="email" placeholder="البريد الإلكتروني">
+    <input id="regPass" type="password" placeholder="كلمة المرور">
+
+    <button onclick="register()">تسجيل</button>
+
+    <div class="switch" onclick="showLogin()">لديك حساب؟ تسجيل دخول</div>
+</div>
+
+<script type="module">
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabase = createClient(
+    "https://zrnrrnbyhjcusfwoeucd.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+);
+
+// التبديل بين النماذج
+function showRegister() {
+    loginBox.style.display = "none";
+    registerBox.style.display = "block";
+}
+
+function showLogin() {
+    registerBox.style.display = "none";
+    loginBox.style.display = "block";
+}
+
+// تسجيل حساب جديد
+async function register() {
+
+    let email = document.getElementById("regEmail").value;
+    let pass = document.getElementById("regPass").value;
+
+    const { data, error } = await supabase.auth.signUp({
+        email: email,
+        password: pass
+    });
+
+    if (error) return alert("خطأ في إنشاء الحساب");
+
+    // إنشاء رصيد جديد للمستخدم
+    await supabase.from("balances").insert({
+        user_id: data.user.id,
+        balance: 0,
+        first_deposit_date: null
+    });
+
+    alert("✔ تم إنشاء الحساب");
+    window.location.href = "dashboard.html";
+}
+
+// تسجيل الدخول
+async function login() {
+
+    let email = document.getElementById("loginEmail").value;
+    let pass = document.getElementById("loginPass").value;
+
+    const { error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: pass
+    });
+
+    if (error) return alert("بيانات الدخول غير صحيحة");
+
+    window.location.href = "dashboard.html";
+}
+
+</script>
+
+</body>
+</html>
