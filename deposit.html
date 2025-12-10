@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>شحن الرصيد</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+    body {
+        background: #0d0d0d;
+        color: white;
+        font-family: system-ui;
+        text-align: center;
+        padding: 20px;
+    }
+
+    h2 {
+        color: gold;
+        margin-bottom: 20px;
+    }
+
+    .box {
+        background: #1d1d1d;
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid #444;
+        margin-bottom: 20px;
+    }
+
+    select, input {
+        width: 100%;
+        padding: 12px;
+        margin-top: 12px;
+        background: #111;
+        border: 1px solid #555;
+        border-radius: 10px;
+        color: white;
+        font-size: 16px;
+        text-align: right;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        margin-top: 15px;
+        background: gold;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        color: black;
+        cursor: pointer;
+    }
+
+    .note {
+        margin-top: 15px;
+        color: #ccc;
+        font-size: 14px;
+    }
+
+    .wallet {
+        color: gold;
+        font-weight: bold;
+        font-size: 16px;
+        margin-top: 10px;
+    }
+
+</style>
+</head>
+
+<body>
+
+<h2>شحن الرصيد</h2>
+
+<div class="box">
+
+    <label>اختر مبلغ الشحن</label>
+    <select id="amount">
+        <option value="10">$10</option>
+        <option value="50">$50</option>
+        <option value="100">$100</option>
+        <option value="200">$200</option>
+        <option value="500">$500</option>
+        <option value="1000">$1000</option>
+    </select>
+
+    <label>رقم التحويل (TXID)</label>
+    <input id="txid" type="text" placeholder="أدخل رقم التحويل">
+
+    <button onclick="sendDeposit()">إرسال طلب الشحن</button>
+
+    <div class="note">قم بإرسال المبلغ إلى محفظة الموقع:</div>
+
+    <div class="wallet">
+        TPNoGerv1EMBSdrs9Yca93eCQUVsoNiRvq
+    </div>
+
+</div>
+
+<script type="module">
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabase = createClient(
+    "https://zrnrrnbyhjcusfwoeucd.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+);
+
+let user_id = null;
+
+// تحميل جلسة المستخدم
+async function loadUser() {
+    let { data: session } = await supabase.auth.getUser();
+
+    if (!session.user) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    user_id = session.user.id;
+}
+
+loadUser();
+
+// إرسال طلب الشحن
+async function sendDeposit() {
+
+    let amount = document.getElementById("amount").value;
+    let txid = document.getElementById("txid").value.trim();
+
+    if (!txid) {
+        alert("أدخل رقم التحويل الصحيح");
+        return;
+    }
+
+    // إرسال الطلب إلى جدول الشحن
+    let { error } = await supabase.from("deposit_requests").insert({
+        user_id: user_id,
+        amount: amount,
+        txid: txid,
+        status: "pending",
+        created_at: new Date()
+    });
+
+    if (error) {
+        alert("حدث خطأ في إرسال الطلب");
+        return;
+    }
+
+    // تحديث تاريخ أول عملية شحن
+    await supabase.rpc("set_first_deposit_date", { uid: user_id });
+
+    alert("✔ تم إرسال طلب الشحن، سيتم مراجعته من الإدارة");
+    window.location.href = "wallet.html";
+}
+
+</script>
+
+</body>
+</html>
