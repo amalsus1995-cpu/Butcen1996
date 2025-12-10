@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>سحب الأموال</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+    body {
+        background: #0d0d0d;
+        color: white;
+        font-family: system-ui;
+        text-align: center;
+        padding: 20px;
+    }
+
+    h2 {
+        color: gold;
+        margin-bottom: 20px;
+    }
+
+    .box {
+        background: #1d1d1d;
+        padding: 20px;
+        border-radius: 15px;
+        border: 1px solid #444;
+        margin-bottom: 20px;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px;
+        margin-top: 12px;
+        background: #111;
+        border: 1px solid #555;
+        border-radius: 10px;
+        color: white;
+        font-size: 16px;
+        text-align: right;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        margin-top: 15px;
+        background: gold;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        color: black;
+        cursor: pointer;
+    }
+
+    .note {
+        color: #bbb;
+        font-size: 13px;
+        margin-top: 10px;
+    }
+
+</style>
+</head>
+
+<body>
+
+<h2>سحب الأموال</h2>
+
+<div class="box">
+
+    <input id="amount" type="number" placeholder="أدخل مبلغ السحب">
+    <input id="wallet" type="text" placeholder="عنوان محفظة USDT (TRC20)">
+
+    <button onclick="submitWithdraw()">إرسال طلب السحب</button>
+
+    <div class="note">
+        ⚠ السحب متاح فقط بعد مرور <b>25 يوم</b> من أول عملية شحن
+    </div>
+
+</div>
+
+<script type="module">
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabase = createClient(
+    "https://zrnrrnbyhjcusfwoeucd.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+);
+
+let user_id = null;
+let balance = 0;
+let firstDepositDate = null;
+
+// تحميل بيانات المستخدم
+async function loadData() {
+    let { data: session } = await supabase.auth.getUser();
+
+    if (!session.user) {
+        window.location.href = "index.html";
+        return;
+    }
+
+    user_id = session.user.id;
+
+    let { data: bal } = await supabase
+        .from("balances")
+        .select("*")
+        .eq("user_id", user_id)
+        .maybeSingle();
+
+    balance = bal?.balance ?? 0;
+    firstDepositDate = bal?.first_deposit_date ?? null;
+}
+
+loadData();
+
+// إرسال طلب السحب
+async function submitWithdraw() {
+
+    let amount = parseFloat(document.getElementById("amount").value);
+    let wallet = document.getElementById("wallet").value.trim();
+
+    if (!amount || amount <= 0) {
+        alert("أدخل مبلغ صحيح");
+        return;
+    }
+
+    if (amount > balance) {
+        alert("🚫 المبلغ المطلوب أكبر من رصيدك");
+        return;
+    }
+
+    if (!wallet) {
+        alert("أدخل عنوان محفظة TRC20");
+        return;
+    }
+
+    if (!firstDepositDate) {
+        alert("🚫 لا يمكنك السحب قبل تنفيذ أول عملية شحن");
+        return;
+    }
+
+    let start = new Date(firstDepositDate);
+    let now = new Date();
+    let diff = (now - start) / (1000 * 60 * 60 * 24);
+
+    if (diff < 25) {
+        alert("🚫 السحب غير مسموح قبل مرور 25 يوم\nباقي: " + Math.ceil(25 - diff) + " يوم");
+        return;
+    }
+
+    // إرسال الطلب
+    let { error } = await supabase.from("withdrawal_requests").insert({
+        user_id: user_id,
+        amount: amount,
+        wallet_address: wallet,
+        status: "pending",
+        created_at: new Date()
+    });
+
+    if (error) {
+        alert("حدث خطأ، حاول مرة أخرى");
+        return;
+    }
+
+    alert("✔ تم إرسال طلب السحب إلى الإدارة");
+    window.location.href = "wallet.html";
+}
+
+</script>
+
+</body>
+</html>
